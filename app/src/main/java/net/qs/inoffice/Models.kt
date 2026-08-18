@@ -4,13 +4,15 @@ enum class WorkLocation {
     HOME,
     BASE,
     OTHER,
-    LEAVE
+    LEAVE,
+    WFH
 }
 
 data class DayState(
     val planned: WorkLocation = WorkLocation.HOME,
     val actual: WorkLocation = WorkLocation.HOME,
-    val locationName: String? = null
+    val locationName: String? = null,
+    val workHours: Double? = null,
 )
 
 data class MonthStats(
@@ -33,3 +35,13 @@ data class OfficeLocation(
     val lng: Double,
     val type: WorkLocation
 )
+
+enum class DashboardAction {
+    NONE,
+    SET_PLANNED,
+    SET_ACTUAL,
+    SET_WFH,
+    SET_HOLIDAY,
+    SET_HOURS,
+    ERASER
+}

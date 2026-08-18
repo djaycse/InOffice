@@ -7,9 +7,10 @@ import kotlin.math.roundToInt
 fun colorFor(state: WorkLocation): Color {
     return when (state) {
         WorkLocation.HOME -> Color.Transparent
-        WorkLocation.BASE -> Color(0xFFFFA500)
-        WorkLocation.OTHER -> Color(0xFF4CAF50)
+        WorkLocation.BASE -> Color(0xFF4CAF50) // Green
+        WorkLocation.OTHER -> Color(0xFFFFA500) // Orange
         WorkLocation.LEAVE -> Color.Transparent
+        WorkLocation.WFH -> Color(0xFFFF0000) // Red
     }
 }
 

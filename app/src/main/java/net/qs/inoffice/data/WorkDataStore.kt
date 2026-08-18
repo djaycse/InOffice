@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import net.qs.inoffice.DayState
 import net.qs.inoffice.OfficeLocation
@@ -23,6 +24,7 @@ class WorkDataStore(private val context: Context) {
         private val KEY_GOAL_OFFICE_PERCENT = stringPreferencesKey("goal_office_percent")
         private val KEY_GOAL_TEAM_HUB_DAYS = stringPreferencesKey("goal_team_hub_days")
         private val KEY_GPS_LOG = stringPreferencesKey("gps_log")
+        private val KEY_THEME = stringPreferencesKey("app_theme")
     }
 
     // Read full map
@@ -53,11 +55,12 @@ class WorkDataStore(private val context: Context) {
                     val plannedStr = values[0]
                     val actualStr = if (values.size > 1) values[1] else values[0]
                     val locationName = if (values.size > 2) values[2].ifEmpty { null } else null
+                    val workHours = if (values.size > 3) values[3].toDoubleOrNull() else null
 
                     val planned = try { WorkLocation.valueOf(plannedStr) } catch(e: Exception) { WorkLocation.HOME }
                     val actual = try { WorkLocation.valueOf(actualStr) } catch(e: Exception) { WorkLocation.HOME }
                     
-                    date to DayState(planned, actual, locationName)
+                    date to DayState(planned, actual, locationName, workHours)
                 }
         }
 
@@ -82,7 +85,7 @@ class WorkDataStore(private val context: Context) {
                 }
                 .toMutableList()
 
-            map.add("$date:${state.planned.name},${state.actual.name},${state.locationName ?: ""}")
+            map.add("$date:${state.planned.name},${state.actual.name},${state.locationName ?: ""},${state.workHours ?: ""}")
 
             prefs[KEY_DATA] = map.joinToString("|")
         }
@@ -212,6 +215,36 @@ class WorkDataStore(private val context: Context) {
     suspend fun clearGpsLog() {
         context.dataStore.edit { prefs ->
             prefs.remove(KEY_GPS_LOG)
+        }
+    }
+
+    val appTheme: Flow<String> =
+        context.dataStore.data.map { prefs ->
+            prefs[KEY_THEME] ?: "FOLLOW_SYSTEM"
+        }
+
+    suspend fun saveAppTheme(theme: String) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_THEME] = theme
+        }
+    }
+
+    suspend fun exportData(): String {
+        val prefs = context.dataStore.data.first()
+        val all = prefs.asMap()
+        return all.entries.joinToString("\n") { "${it.key.name}=${it.value}" }
+    }
+
+    suspend fun importData(content: String) {
+        val lines = content.lines()
+        context.dataStore.edit { prefs ->
+            lines.forEach { line ->
+                val parts = line.split("=", limit = 2)
+                if (parts.size == 2) {
+                    val key = stringPreferencesKey(parts[0])
+                    prefs[key] = parts[1]
+                }
+            }
         }
     }
 }
