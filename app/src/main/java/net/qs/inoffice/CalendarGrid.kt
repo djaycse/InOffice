@@ -6,9 +6,14 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,7 +32,8 @@ fun CalendarGrid(
     month: YearMonth,
     dayStates: MutableMap<String, DayState>,
     scope: CoroutineScope,
-    store: WorkDataStore
+    store: WorkDataStore,
+    selectedAction: DashboardAction
 ) {
 
     val firstDay = month.atDay(1)
@@ -35,6 +41,7 @@ fun CalendarGrid(
     val startOffset = firstDay.dayOfWeek.value - 1
 
     val today = LocalDate.now()
+    var showHoursDialog by remember { mutableStateOf<String?>(null) }
 
     Column {
 
@@ -99,7 +106,6 @@ fun CalendarGrid(
                                         if (isDayOff) dayOffColor
                                         else Color.Transparent
                                     )
-                                    // Today highlight: full size themed border
                                     .border(
                                         width = if (isToday) 2.dp else 0.dp,
                                         color = if (isToday) MaterialTheme.colorScheme.primary else Color.Transparent
@@ -108,24 +114,45 @@ fun CalendarGrid(
                                         interactionSource = remember { MutableInteractionSource() },
                                         indication = null,
                                         onClick = {
-                                            val nextPlanned = when (dayState.planned) {
-                                                WorkLocation.HOME -> WorkLocation.BASE
-                                                WorkLocation.BASE -> WorkLocation.OTHER
-                                                WorkLocation.OTHER -> WorkLocation.LEAVE
-                                                WorkLocation.LEAVE -> WorkLocation.HOME
+                                            if (selectedAction == DashboardAction.NONE) return@combinedClickable
+                                            
+                                            val newState = when (selectedAction) {
+                                                DashboardAction.SET_PLANNED -> {
+                                                    val next = when (dayState.planned) {
+                                                        WorkLocation.BASE -> WorkLocation.OTHER
+                                                        WorkLocation.OTHER -> WorkLocation.HOME
+                                                        else -> WorkLocation.BASE
+                                                    }
+                                                    dayState.copy(planned = next)
+                                                }
+                                                DashboardAction.SET_ACTUAL -> {
+                                                    val next = when (dayState.actual) {
+                                                        WorkLocation.BASE -> WorkLocation.OTHER
+                                                        WorkLocation.OTHER -> WorkLocation.HOME
+                                                        else -> WorkLocation.BASE
+                                                    }
+                                                    dayState.copy(actual = next)
+                                                }
+                                                DashboardAction.SET_WFH -> {
+                                                    val next = if (dayState.planned == WorkLocation.WFH) WorkLocation.HOME else WorkLocation.WFH
+                                                    dayState.copy(planned = next)
+                                                }
+                                                DashboardAction.SET_HOLIDAY -> {
+                                                    val next = if (dayState.planned == WorkLocation.LEAVE) WorkLocation.HOME else WorkLocation.LEAVE
+                                                    dayState.copy(planned = next)
+                                                }
+                                                DashboardAction.SET_HOURS -> {
+                                                    showHoursDialog = dateKey
+                                                    dayState
+                                                }
+                                                DashboardAction.ERASER -> {
+                                                    dayState.copy(planned = WorkLocation.HOME, actual = WorkLocation.HOME)
+                                                }
+                                                else -> dayState
                                             }
-                                            val newState = dayState.copy(planned = nextPlanned)
-                                            updateState(dateKey, newState, dayStates, scope, store)
-                                        },
-                                        onLongClick = {
-                                            val nextActual = when (dayState.actual) {
-                                                WorkLocation.HOME -> WorkLocation.BASE
-                                                WorkLocation.BASE -> WorkLocation.OTHER
-                                                WorkLocation.OTHER -> WorkLocation.HOME
-                                                WorkLocation.LEAVE -> WorkLocation.HOME // Keep actual simple for now
+                                            if (selectedAction != DashboardAction.SET_HOURS) {
+                                                updateState(dateKey, newState, dayStates, scope, store)
                                             }
-                                            val newState = dayState.copy(actual = nextActual)
-                                            updateState(dateKey, newState, dayStates, scope, store)
                                         }
                                     ),
                                 contentAlignment = Alignment.Center
@@ -135,7 +162,7 @@ fun CalendarGrid(
                                     Box(
                                         modifier = Modifier
                                             .fillMaxSize()
-                                            .padding(if (isToday) 10.dp else 8.dp) // Smaller inner circle
+                                            .padding(if (isToday) 10.dp else 8.dp)
                                             .background(colorFor(dayState.planned), CircleShape)
                                     )
                                 }
@@ -145,7 +172,7 @@ fun CalendarGrid(
                                     Box(
                                         modifier = Modifier
                                             .fillMaxSize()
-                                            .padding(if (isToday) 4.dp else 2.dp) // Outer circle
+                                            .padding(if (isToday) 4.dp else 2.dp)
                                             .border(3.dp, colorFor(dayState.actual), CircleShape)
                                     )
                                 }
@@ -156,12 +183,72 @@ fun CalendarGrid(
                                     else if (dayState.planned == WorkLocation.HOME) MaterialTheme.colorScheme.onSurface
                                     else Color.Black
                                 )
+                                
+                                // Indicator for hours worked
+                                if (dayState.workHours != null) {
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.BottomCenter)
+                                            .padding(bottom = 2.dp)
+                                            .size(4.dp)
+                                            .background(MaterialTheme.colorScheme.secondary, CircleShape)
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
         }
+    }
+
+    if (showHoursDialog != null) {
+        val dateKey = showHoursDialog!!
+        val currentState = dayStates[dateKey] ?: DayState()
+
+        AlertDialog(
+            onDismissRequest = { showHoursDialog = null },
+            title = { Text("Set Hours Worked") },
+            text = {
+                val hoursList = (0..24).map { it * 0.5 }
+                Box(modifier = Modifier.height(300.dp)) {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(4),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        contentPadding = PaddingValues(4.dp)
+                    ) {
+                        items(hoursList) { hours ->
+                            val isSelected = currentState.workHours == hours
+                            Button(
+                                onClick = {
+                                    updateState(dateKey, currentState.copy(workHours = hours), dayStates, scope, store)
+                                    showHoursDialog = null
+                                },
+                                modifier = Modifier.aspectRatio(1.2f),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                                    contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                ),
+                                contentPadding = PaddingValues(0.dp),
+                                shape = RoundedCornerShape(4.dp)
+                            ) {
+                                Text(
+                                    text = if (hours == hours.toInt().toDouble()) hours.toInt().toString() else hours.toString(),
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showHoursDialog = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
@@ -172,14 +259,14 @@ private fun updateState(
     scope: CoroutineScope,
     store: WorkDataStore
 ) {
-    if (newState.planned == WorkLocation.HOME && newState.actual == WorkLocation.HOME) {
+    if (newState.planned == WorkLocation.HOME && newState.actual == WorkLocation.HOME && newState.workHours == null) {
         dayStates.remove(dateKey)
     } else {
         dayStates[dateKey] = newState
     }
 
     scope.launch {
-        if (newState.planned == WorkLocation.HOME && newState.actual == WorkLocation.HOME) {
+        if (newState.planned == WorkLocation.HOME && newState.actual == WorkLocation.HOME && newState.workHours == null) {
             store.delete(dateKey)
         } else {
             store.save(dateKey, newState)
