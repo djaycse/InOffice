@@ -24,7 +24,7 @@ fun MonthHeader(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = "${month.month.name.lowercase().replaceFirstChar { it.uppercase() }} ${month.year}",
+            text = "${month.month.name.lowercase().replaceFirstChar { it.uppercase() }.take(3)} ${month.year}",
             style = MaterialTheme.typography.titleLarge
         )
 

@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import net.qs.inoffice.AppTheme
 import net.qs.inoffice.DayState
 import net.qs.inoffice.OfficeLocation
 import net.qs.inoffice.WorkLocation
@@ -23,6 +24,7 @@ class WorkDataStore(private val context: Context) {
         private val KEY_GOAL_OFFICE_PERCENT = stringPreferencesKey("goal_office_percent")
         private val KEY_GOAL_TEAM_HUB_DAYS = stringPreferencesKey("goal_team_hub_days")
         private val KEY_GPS_LOG = stringPreferencesKey("gps_log")
+        private val KEY_THEME = stringPreferencesKey("app_theme")
     }
 
     // Read full map
@@ -53,11 +55,12 @@ class WorkDataStore(private val context: Context) {
                     val plannedStr = values[0]
                     val actualStr = if (values.size > 1) values[1] else values[0]
                     val locationName = if (values.size > 2) values[2].ifEmpty { null } else null
+                    val hours = if (values.size > 3) values[3].toDoubleOrNull() ?: 0.0 else 0.0
 
                     val planned = try { WorkLocation.valueOf(plannedStr) } catch(e: Exception) { WorkLocation.HOME }
                     val actual = try { WorkLocation.valueOf(actualStr) } catch(e: Exception) { WorkLocation.HOME }
                     
-                    date to DayState(planned, actual, locationName)
+                    date to DayState(planned, actual, locationName, hours)
                 }
         }
 
@@ -82,7 +85,7 @@ class WorkDataStore(private val context: Context) {
                 }
                 .toMutableList()
 
-            map.add("$date:${state.planned.name},${state.actual.name},${state.locationName ?: ""}")
+            map.add("$date:${state.planned.name},${state.actual.name},${state.locationName ?: ""},${state.hours}")
 
             prefs[KEY_DATA] = map.joinToString("|")
         }
@@ -212,6 +215,22 @@ class WorkDataStore(private val context: Context) {
     suspend fun clearGpsLog() {
         context.dataStore.edit { prefs ->
             prefs.remove(KEY_GPS_LOG)
+        }
+    }
+
+    val appTheme: Flow<AppTheme> =
+        context.dataStore.data.map { prefs ->
+            val raw = prefs[KEY_THEME] ?: AppTheme.DEFAULT.name
+            try {
+                AppTheme.valueOf(raw)
+            } catch (e: Exception) {
+                AppTheme.DEFAULT
+            }
+        }
+
+    suspend fun saveAppTheme(theme: AppTheme) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_THEME] = theme.name
         }
     }
 }

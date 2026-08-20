@@ -20,10 +20,32 @@ percentage and "Team Hub" days.
 
 ## Changelog
 
-### Version 1.0.1
+### Version 1.1.0
 
-* Fixed clock and other items from top of screen being hidden with white background colour in light
-  mode theme.
+#### New features
+
+* New tap 'mode' selection decides what tapping on a date will do. Tap again to restore previous
+  state.
+* Track hours worked per day, set via a new tap mode, and shown visually as a triangle notch on a
+  date.
+* Set exclusive light/dark/default application-wide theme
+
+#### Changes
+
+* Tap and hold on a date no longer sets actual office location. Use new tap 'mode' instead.
+* Aligned Team hub and Other office colours with application icon colours:
+    * Team hub changed from orange to green
+    * Other office changed from green to blue
+* UI tweaks to better handling of Android's larger display scaling and font settings:
+    * Shortened calendar title and days of week
+    * Removed legend from main screen and moved into How to use screen
+    * Removed progress bars for plan and actual statistics
+* Combined Offices, Auto-detect, and Goals menu items into a single Settings menu
+
+#### Fixes
+
+* Clock and other items on top of screen were being hidden with white background colour in light
+  theme.
 
 ### Version 1.0.0
 
