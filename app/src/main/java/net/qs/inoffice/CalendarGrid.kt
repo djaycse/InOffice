@@ -1,19 +1,31 @@
 package net.qs.inoffice
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -27,7 +39,9 @@ fun CalendarGrid(
     month: YearMonth,
     dayStates: MutableMap<String, DayState>,
     scope: CoroutineScope,
-    store: WorkDataStore
+    store: WorkDataStore,
+    tapMode: TapMode,
+    onSetHours: (String, DayState) -> Unit
 ) {
 
     val firstDay = month.atDay(1)
@@ -38,15 +52,26 @@ fun CalendarGrid(
 
     Column {
 
-        val days = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+        val days = listOf("M", "T", "W", "T", "F", "S", "S")
 
         Row(Modifier.fillMaxWidth()) {
             days.forEach {
-                Text(
-                    text = it,
-                    modifier = Modifier.weight(1f),
-                    textAlign = TextAlign.Center
-                )
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(2.dp)
+                        .background(
+                            MaterialTheme.colorScheme.surfaceVariant,
+                            RoundedCornerShape(4.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
 
@@ -89,7 +114,8 @@ fun CalendarGrid(
                             val isLeave = dayState.planned == WorkLocation.LEAVE
                             val isDayOff = isWeekend || isLeave
                             val isDark = androidx.compose.foundation.isSystemInDarkTheme()
-                            val dayOffColor = if (isDark) net.qs.inoffice.ui.theme.DayOffDark else net.qs.inoffice.ui.theme.DayOffLight
+                            val dayOffColor =
+                                if (isDark) net.qs.inoffice.ui.theme.DayOffDark else net.qs.inoffice.ui.theme.DayOffLight
                             val onDayOffColor = if (isDark) Color.White else Color.Black
 
                             Box(
@@ -108,24 +134,85 @@ fun CalendarGrid(
                                         interactionSource = remember { MutableInteractionSource() },
                                         indication = null,
                                         onClick = {
-                                            val nextPlanned = when (dayState.planned) {
-                                                WorkLocation.HOME -> WorkLocation.BASE
-                                                WorkLocation.BASE -> WorkLocation.OTHER
-                                                WorkLocation.OTHER -> WorkLocation.LEAVE
-                                                WorkLocation.LEAVE -> WorkLocation.HOME
+                                            when (tapMode) {
+                                                TapMode.DO_NOTHING -> {}
+                                                TapMode.TEAM_HUB_PLAN -> {
+                                                    val next =
+                                                        if (dayState.planned == WorkLocation.BASE) WorkLocation.HOME else WorkLocation.BASE
+                                                    updateState(
+                                                        dateKey,
+                                                        dayState.copy(planned = next),
+                                                        dayStates,
+                                                        scope,
+                                                        store
+                                                    )
+                                                }
+
+                                                TapMode.OTHER_OFFICE_PLAN -> {
+                                                    val next =
+                                                        if (dayState.planned == WorkLocation.OTHER) WorkLocation.HOME else WorkLocation.OTHER
+                                                    updateState(
+                                                        dateKey,
+                                                        dayState.copy(planned = next),
+                                                        dayStates,
+                                                        scope,
+                                                        store
+                                                    )
+                                                }
+
+                                                TapMode.TEAM_HUB_ACTUAL -> {
+                                                    val next =
+                                                        if (dayState.actual == WorkLocation.BASE) WorkLocation.HOME else WorkLocation.BASE
+                                                    updateState(
+                                                        dateKey,
+                                                        dayState.copy(actual = next),
+                                                        dayStates,
+                                                        scope,
+                                                        store
+                                                    )
+                                                }
+
+                                                TapMode.OTHER_OFFICE_ACTUAL -> {
+                                                    val next =
+                                                        if (dayState.actual == WorkLocation.OTHER) WorkLocation.HOME else WorkLocation.OTHER
+                                                    updateState(
+                                                        dateKey,
+                                                        dayState.copy(actual = next),
+                                                        dayStates,
+                                                        scope,
+                                                        store
+                                                    )
+                                                }
+
+                                                TapMode.DAY_OFF -> {
+                                                    val next =
+                                                        if (dayState.planned == WorkLocation.LEAVE) WorkLocation.HOME else WorkLocation.LEAVE
+                                                    updateState(
+                                                        dateKey,
+                                                        dayState.copy(planned = next),
+                                                        dayStates,
+                                                        scope,
+                                                        store
+                                                    )
+                                                }
+
+                                                TapMode.WFH -> {
+                                                    updateState(
+                                                        dateKey,
+                                                        dayState.copy(
+                                                            planned = WorkLocation.HOME,
+                                                            actual = WorkLocation.HOME
+                                                        ),
+                                                        dayStates,
+                                                        scope,
+                                                        store
+                                                    )
+                                                }
+
+                                                TapMode.SET_HOURS -> {
+                                                    onSetHours(dateKey, dayState)
+                                                }
                                             }
-                                            val newState = dayState.copy(planned = nextPlanned)
-                                            updateState(dateKey, newState, dayStates, scope, store)
-                                        },
-                                        onLongClick = {
-                                            val nextActual = when (dayState.actual) {
-                                                WorkLocation.HOME -> WorkLocation.BASE
-                                                WorkLocation.BASE -> WorkLocation.OTHER
-                                                WorkLocation.OTHER -> WorkLocation.HOME
-                                                WorkLocation.LEAVE -> WorkLocation.HOME // Keep actual simple for now
-                                            }
-                                            val newState = dayState.copy(actual = nextActual)
-                                            updateState(dateKey, newState, dayStates, scope, store)
                                         }
                                     ),
                                 contentAlignment = Alignment.Center
@@ -156,6 +243,24 @@ fun CalendarGrid(
                                     else if (dayState.planned == WorkLocation.HOME) MaterialTheme.colorScheme.onSurface
                                     else Color.Black
                                 )
+
+                                if (dayState.hours > 0) {
+                                    val notchColor =
+                                        if (isDark) Color(0xFFBDBDBD) else Color(0xFF424242)
+                                    Canvas(
+                                        modifier = Modifier
+                                            .align(Alignment.TopEnd)
+                                            .size(8.dp)
+                                    ) {
+                                        val path = Path().apply {
+                                            moveTo(size.width, 0f)
+                                            lineTo(size.width, size.height)
+                                            lineTo(0f, 0f)
+                                            close()
+                                        }
+                                        drawPath(path, color = notchColor)
+                                    }
+                                }
                             }
                         }
                     }
