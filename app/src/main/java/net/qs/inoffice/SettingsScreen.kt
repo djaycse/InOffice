@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.ImportExport
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Wifi
@@ -46,7 +47,8 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onNavigateToOffices: () -> Unit,
     onNavigateToAutoDetect: () -> Unit,
-    onNavigateToGoals: () -> Unit
+    onNavigateToGoals: () -> Unit,
+    onNavigateToData: () -> Unit
 ) {
     val theme by store.appTheme.collectAsState(initial = AppTheme.DEFAULT)
     val scope = rememberCoroutineScope()
@@ -75,23 +77,26 @@ fun SettingsScreen(
         ) {
             SettingsItem(
                 title = "Office Locations",
-                subtitle = "Manage your Team Hub and other offices",
                 icon = Icons.Default.LocationOn,
                 onClick = onNavigateToOffices
             )
             HorizontalDivider()
             SettingsItem(
                 title = "Auto-detect",
-                subtitle = "WiFi and GPS polling settings",
                 icon = Icons.Default.Wifi,
                 onClick = onNavigateToAutoDetect
             )
             HorizontalDivider()
             SettingsItem(
                 title = "Goals",
-                subtitle = "Set your attendance targets",
-                icon = Icons.Default.Settings, // Or another appropriate icon
+                icon = Icons.Default.Settings,
                 onClick = onNavigateToGoals
+            )
+            HorizontalDivider()
+            SettingsItem(
+                title = "Import/Export",
+                icon = Icons.Default.ImportExport,
+                onClick = onNavigateToData
             )
             
             Spacer(Modifier.height(16.dp))
@@ -129,13 +134,11 @@ fun SettingsScreen(
 @Composable
 private fun SettingsItem(
     title: String,
-    subtitle: String,
     icon: ImageVector,
     onClick: () -> Unit
 ) {
     ListItem(
         headlineContent = { Text(title) },
-        supportingContent = { Text(subtitle) },
         leadingContent = { Icon(icon, contentDescription = null) },
         trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null) },
         modifier = Modifier.clickable(onClick = onClick)

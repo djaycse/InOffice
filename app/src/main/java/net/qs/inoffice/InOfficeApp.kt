@@ -28,6 +28,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.automirrored.filled.ListAlt
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
@@ -93,7 +94,9 @@ fun InOfficeApp(store: WorkDataStore) {
     var showOfficeLocations by remember { mutableStateOf(false) }
     var showWifiSettings by remember { mutableStateOf(false) }
     var showGoalSettings by remember { mutableStateOf(false) }
+    var showDataSettings by remember { mutableStateOf(false) }
     var showGpsLog by remember { mutableStateOf(false) }
+    var showStatistics by remember { mutableStateOf(false) }
     var menuExpanded by remember { mutableStateOf(false) }
     var tapMode by remember { mutableStateOf(TapMode.DO_NOTHING) }
 
@@ -161,6 +164,15 @@ fun InOfficeApp(store: WorkDataStore) {
         return
     }
 
+    if (showDataSettings) {
+        BackHandler { showDataSettings = false }
+        DataScreen(
+            store = store,
+            onBack = { showDataSettings = false }
+        )
+        return
+    }
+
     if (showSettings) {
         BackHandler { showSettings = false }
         SettingsScreen(
@@ -168,7 +180,8 @@ fun InOfficeApp(store: WorkDataStore) {
             onBack = { showSettings = false },
             onNavigateToOffices = { showOfficeLocations = true },
             onNavigateToAutoDetect = { showWifiSettings = true },
-            onNavigateToGoals = { showGoalSettings = true }
+            onNavigateToGoals = { showGoalSettings = true },
+            onNavigateToData = { showDataSettings = true }
         )
         return
     }
@@ -178,6 +191,15 @@ fun InOfficeApp(store: WorkDataStore) {
         GpsLogScreen(
             store = store,
             onBack = { showGpsLog = false }
+        )
+        return
+    }
+
+    if (showStatistics) {
+        BackHandler { showStatistics = false }
+        StatisticsScreen(
+            store = store,
+            onBack = { showStatistics = false }
         )
         return
     }
@@ -255,6 +277,19 @@ fun InOfficeApp(store: WorkDataStore) {
                                 leadingIcon = {
                                     Icon(
                                         Icons.AutoMirrored.Filled.ListAlt,
+                                        contentDescription = null
+                                    )
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Statistics") },
+                                onClick = {
+                                    menuExpanded = false
+                                    showStatistics = true
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.TrendingUp,
                                         contentDescription = null
                                     )
                                 }
