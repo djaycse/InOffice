@@ -20,6 +20,13 @@ percentage and "Team Hub" days.
 
 ## Changelog
 
+### Version 1.2.0
+
+#### New features
+
+* Monthly/yearly statistics now available via new Statistics menu
+* Import/Export of settings and calendar data now available via Settings menu
+
 ### Version 1.1.0
 
 #### New features
