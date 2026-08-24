@@ -2,6 +2,12 @@ package net.qs.inoffice
 
 import android.widget.ImageView
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -28,9 +34,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.automirrored.filled.ListAlt
-import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
@@ -56,6 +62,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -64,6 +71,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
@@ -99,6 +107,9 @@ fun InOfficeApp(store: WorkDataStore) {
     var showStatistics by remember { mutableStateOf(false) }
     var menuExpanded by remember { mutableStateOf(false) }
     var tapMode by remember { mutableStateOf(TapMode.DO_NOTHING) }
+
+    var logoTapCount by remember { mutableIntStateOf(0) }
+    var isEasterEggActive by remember { mutableStateOf(false) }
 
     var showHoursDialog by remember { mutableStateOf(false) }
     var selectedDateKey by remember { mutableStateOf("") }
@@ -289,7 +300,7 @@ fun InOfficeApp(store: WorkDataStore) {
                                 },
                                 leadingIcon = {
                                     Icon(
-                                        Icons.AutoMirrored.Filled.TrendingUp,
+                                        Icons.Default.BarChart,
                                         contentDescription = null
                                     )
                                 }
@@ -499,10 +510,29 @@ fun InOfficeApp(store: WorkDataStore) {
     }
 
     if (showAbout) {
+        val infiniteTransition = rememberInfiniteTransition(label = "logoRotation")
+        val rotation by infiniteTransition.animateFloat(
+            initialValue = 0f,
+            targetValue = 360f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(2000, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart
+            ),
+            label = "rotation"
+        )
+
         AlertDialog(
-            onDismissRequest = { showAbout = false },
+            onDismissRequest = {
+                showAbout = false
+                logoTapCount = 0
+                isEasterEggActive = false
+            },
             confirmButton = {
-                TextButton(onClick = { showAbout = false }) {
+                TextButton(onClick = {
+                    showAbout = false
+                    logoTapCount = 0
+                    isEasterEggActive = false
+                }) {
                     Text("Close")
                 }
             },
@@ -521,14 +551,21 @@ fun InOfficeApp(store: WorkDataStore) {
                         modifier = Modifier
                             .size(64.dp)
                             .clip(RoundedCornerShape(12.dp))
+                            .rotate(if (isEasterEggActive) rotation else 0f)
+                            .clickable {
+                                logoTapCount++
+                                if (logoTapCount >= 10) {
+                                    isEasterEggActive = true
+                                }
+                            }
                     )
                     Spacer(Modifier.height(16.dp))
                     Text(
-                        "InOffice",
+                        if (isEasterEggActive) "InOffice EXTREME" else "InOffice",
                         style = MaterialTheme.typography.headlineSmall
                     )
                     Text(
-                        "v${BuildConfig.VERSION_NAME}",
+                        if (isEasterEggActive) "v∞" else "v${BuildConfig.VERSION_NAME}",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -543,7 +580,7 @@ fun InOfficeApp(store: WorkDataStore) {
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        "A simple office attendance planner and tracker designed to help you stay on top of your work-from-office goals.",
+                        if (isEasterEggActive) "UNLIMITED OFFICE POWER! (or just a simple planner, really)." else "A simple office attendance planner and tracker designed to help you stay on top of your work-from-office goals.",
                         textAlign = TextAlign.Center,
                         style = MaterialTheme.typography.bodyMedium
                     )
@@ -551,11 +588,11 @@ fun InOfficeApp(store: WorkDataStore) {
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
                     Text(
-                        "Developed by djaycse.",
+                        if (isEasterEggActive) "Legendary Dev: djaycse" else "Developed by djaycse.",
                         style = MaterialTheme.typography.bodySmall
                     )
                     Text(
-                        "Copyright © 2026",
+                        if (isEasterEggActive) "Time is an illusion © 2026" else "Copyright © 2026",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

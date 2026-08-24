@@ -20,6 +20,15 @@ percentage and "Team Hub" days.
 
 ## Changelog
 
+### Version 1.3.0
+
+#### Changes
+
+* Statistics now allows custom date range and total worked hours, with filtering option for work
+  location / leave days.
+* Statistics page layout changes
+* Added Easter egg :D
+
 ### Version 1.2.0
 
 #### New features
