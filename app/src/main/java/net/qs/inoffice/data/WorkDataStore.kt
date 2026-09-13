@@ -25,6 +25,7 @@ class WorkDataStore(private val context: Context) {
         private val KEY_GOAL_TEAM_HUB_DAYS = stringPreferencesKey("goal_team_hub_days")
         private val KEY_GPS_LOG = stringPreferencesKey("gps_log")
         private val KEY_THEME = stringPreferencesKey("app_theme")
+        private val KEY_GEOFENCE_RADIUS = stringPreferencesKey("geofence_radius")
     }
 
     // Read full map
@@ -190,6 +191,17 @@ class WorkDataStore(private val context: Context) {
     suspend fun saveGoalTeamHubDays(days: Int) {
         context.dataStore.edit { prefs ->
             prefs[KEY_GOAL_TEAM_HUB_DAYS] = days.toString()
+        }
+    }
+
+    val geofenceRadius: Flow<Int> =
+        context.dataStore.data.map { prefs ->
+            prefs[KEY_GEOFENCE_RADIUS]?.toIntOrNull() ?: 50
+        }
+
+    suspend fun saveGeofenceRadius(radius: Int) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_GEOFENCE_RADIUS] = radius.toString()
         }
     }
 

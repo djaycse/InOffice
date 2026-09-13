@@ -35,9 +35,16 @@ fun WifiSettingsScreen(
     val scope = rememberCoroutineScope()
     val currentSsid by store.wifiSsid.collectAsState(initial = "TRANSPORT GUEST")
     val currentInterval by store.pollIntervalMinutes.collectAsState(initial = 30L)
+    val currentGeofenceRadius by store.geofenceRadius.collectAsState(initial = 50)
     
     var ssidValue by remember(currentSsid) { mutableStateOf(currentSsid) }
     var intervalValue by remember(currentInterval) { mutableStateOf(currentInterval.toString()) }
+    var geofenceRadiusValue by remember(currentGeofenceRadius) { mutableStateOf(currentGeofenceRadius.toString()) }
+
+    val radiusInt = geofenceRadiusValue.toIntOrNull()
+    val isRadiusValid = radiusInt != null && radiusInt in 5..1000
+    val intervalInt = intervalValue.toLongOrNull()
+    val isIntervalValid = intervalInt != null && intervalInt >= 1
 
     var hasBackgroundLocation by remember {
         mutableStateOf(
@@ -148,6 +155,22 @@ fun WifiSettingsScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
 
+            Spacer(Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = geofenceRadiusValue,
+                onValueChange = { geofenceRadiusValue = it },
+                label = { Text("Geofence radius (meters)") },
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                isError = !isRadiusValid && geofenceRadiusValue.isNotEmpty(),
+                supportingText = {
+                    if (!isRadiusValid && geofenceRadiusValue.isNotEmpty()) {
+                        Text("Must be between 5 and 1000 meters")
+                    }
+                }
+            )
+
             Spacer(Modifier.height(24.dp))
 
             Button(
@@ -157,6 +180,9 @@ fun WifiSettingsScreen(
                         val interval = intervalValue.toLongOrNull() ?: 30L
                         store.savePollInterval(if (interval < 15) 15 else interval) // WorkManager min is 15
                         
+                        val radius = geofenceRadiusValue.toIntOrNull() ?: 50
+                        store.saveGeofenceRadius(radius.coerceIn(5, 1000))
+                        
                         // Trigger immediate scan
                         val workRequest = OneTimeWorkRequestBuilder<LocationWorker>().build()
                         WorkManager.getInstance(context).enqueue(workRequest)
@@ -164,7 +190,8 @@ fun WifiSettingsScreen(
                         onBack()
                     }
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                enabled = isRadiusValid && isIntervalValid
             ) {
                 Text("Save")
             }

@@ -98,10 +98,11 @@ class LocationWorker(context: Context, params: WorkerParameters) : CoroutineWork
         if (currentLocation == null) return Result.success()
 
         val officeLocations = store.officeLocations.first()
+        val geofenceRadius = store.geofenceRadius.first()
         var matchFound = false
         for (office in officeLocations) {
             val dist = calculateDistance(currentLocation.latitude, currentLocation.longitude, office.lat, office.lng)
-            if (dist <= 50) {
+            if (dist <= geofenceRadius) {
                 matchFound = true
                 
                 if (currentState.locationName != office.name) {

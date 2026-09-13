@@ -80,6 +80,7 @@ fun OfficeLocationsScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val savedLocations by store.officeLocations.collectAsState(initial = null)
+    val geofenceRadius by store.geofenceRadius.collectAsState(initial = 50)
 
     var locationsList by remember { mutableStateOf<List<OfficeLocationUI>>(emptyList()) }
     var editingLocation by remember { mutableStateOf<OfficeLocationUI?>(null) }
@@ -144,6 +145,7 @@ fun OfficeLocationsScreen(
                 LocationList(
                     modifier = Modifier.padding(padding),
                     locations = locationsList,
+                    geofenceRadius = geofenceRadius,
                     onEdit = { editingLocation = it }
                 )
             } else {
@@ -205,6 +207,7 @@ fun OfficeLocationsScreen(
 private fun LocationList(
     modifier: Modifier,
     locations: List<OfficeLocationUI>,
+    geofenceRadius: Int,
     onEdit: (OfficeLocationUI) -> Unit
 ) {
     LazyColumn(modifier = modifier.fillMaxSize()) {
@@ -215,7 +218,7 @@ private fun LocationList(
                     .fillMaxWidth()
             ) {
                 Text(
-                    "Configure up to 10 office locations. Only one can be your Team Hub. The app will periodically check your GPS location against these (see Auto-detect settings). If you are detected within 50 meters of an office location, your actual attendance will be set automatically.",
+                    "Configure up to 10 office locations. Only one can be your Team Hub. The app will periodically check your GPS location against these (see Auto-detect settings). If you are detected within $geofenceRadius meters of an office location, your actual attendance will be set automatically.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
