@@ -56,6 +56,7 @@ class LocationWorker(context: Context, params: WorkerParameters) : CoroutineWork
         }
 
         val wifiSsid = store.wifiSsid.first()
+        val verboseLogging = store.verboseLogging.first()
         val today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
         val currentMap = store.workMap.first()
         val currentState = currentMap[today] ?: DayState()
@@ -76,7 +77,7 @@ class LocationWorker(context: Context, params: WorkerParameters) : CoroutineWork
             }
         }
 
-        if (!isAtWorkWifi) {
+        if (!isAtWorkWifi && !verboseLogging) {
             if (!currentState.locationName.isNullOrEmpty()) {
                 store.addGpsLog("- ${currentState.locationName}")
                 store.save(today, currentState.copy(locationName = null))
@@ -84,7 +85,13 @@ class LocationWorker(context: Context, params: WorkerParameters) : CoroutineWork
             return Result.success()
         }
 
-        // Found wifi, now check GPS
+        // Optimization: If already detected at an office and Wi-Fi is still there,
+        // no need to check GPS unless verbose logging is enabled.
+        if (isAtWorkWifi && !currentState.locationName.isNullOrEmpty() && !verboseLogging) {
+            return Result.success()
+        }
+
+        // Check GPS (either because wifi found/needed or verbose logging is on)
         val fusedLocationClient = LocationServices.getFusedLocationProviderClient(applicationContext)
         val cts = CancellationTokenSource()
         val locationTask = fusedLocationClient.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, cts.token)
@@ -95,37 +102,62 @@ class LocationWorker(context: Context, params: WorkerParameters) : CoroutineWork
             null
         }
 
-        if (currentLocation == null) return Result.success()
+        if (currentLocation == null) {
+            if (verboseLogging) {
+                val wifiStatus = if (isAtWorkWifi) "Found" else "Not found"
+                store.addGpsLog("? Wi-Fi=$wifiStatus [office=No match, loc=Unknown]")
+            }
+
+            if (isAtWorkWifi) return Result.success() // Can't cross-check, but wifi is there. Keep state.
+            
+            if (!currentState.locationName.isNullOrEmpty()) {
+                store.addGpsLog("- ${currentState.locationName}")
+                store.save(today, currentState.copy(locationName = null))
+            }
+            return Result.success()
+        }
 
         val officeLocations = store.officeLocations.first()
         val geofenceRadius = store.geofenceRadius.first()
         var matchFound = false
+        var matchedOfficeName: String? = null
+
         for (office in officeLocations) {
             val dist = calculateDistance(currentLocation.latitude, currentLocation.longitude, office.lat, office.lng)
             if (dist <= geofenceRadius) {
                 matchFound = true
+                matchedOfficeName = office.name
                 
-                if (currentState.locationName != office.name) {
-                    store.addGpsLog("+ ${office.name}")
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(applicationContext, "Detected: ${office.name}", Toast.LENGTH_SHORT).show()
+                if (isAtWorkWifi) {
+                    if (currentState.locationName != office.name) {
+                        store.addGpsLog("+ ${office.name}")
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(applicationContext, "Detected: ${office.name}", Toast.LENGTH_SHORT).show()
+                        }
                     }
-                }
-                
-                val newActual = if (currentState.actual == WorkLocation.HOME || currentState.actual == WorkLocation.LEAVE) {
-                    office.type
-                } else {
-                    currentState.actual
-                }
+                    
+                    val newActual = if (currentState.actual == WorkLocation.HOME || currentState.actual == WorkLocation.LEAVE) {
+                        office.type
+                    } else {
+                        currentState.actual
+                    }
 
-                if (newActual != currentState.actual || currentState.locationName != office.name) {
-                    store.save(today, currentState.copy(actual = newActual, locationName = office.name))
+                    if (newActual != currentState.actual || currentState.locationName != office.name) {
+                        store.save(today, currentState.copy(actual = newActual, locationName = office.name))
+                    }
                 }
                 break
             }
         }
 
-        if (!matchFound) {
+        if (verboseLogging) {
+            val wifiStatus = if (isAtWorkWifi) "Found" else "Not found"
+            val officeStatus = matchedOfficeName ?: "No match"
+            val locStr = "%.4f, %.4f".format(currentLocation.latitude, currentLocation.longitude)
+            store.addGpsLog("? Wi-Fi=$wifiStatus [office=$officeStatus, loc=$locStr]")
+        }
+
+        if (!matchFound || !isAtWorkWifi) {
             if (!currentState.locationName.isNullOrEmpty()) {
                 store.addGpsLog("- ${currentState.locationName}")
                 store.save(today, currentState.copy(locationName = null))

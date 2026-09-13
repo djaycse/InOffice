@@ -26,6 +26,7 @@ class WorkDataStore(private val context: Context) {
         private val KEY_GPS_LOG = stringPreferencesKey("gps_log")
         private val KEY_THEME = stringPreferencesKey("app_theme")
         private val KEY_GEOFENCE_RADIUS = stringPreferencesKey("geofence_radius")
+        private val KEY_VERBOSE_LOGGING = stringPreferencesKey("verbose_logging")
     }
 
     // Read full map
@@ -202,6 +203,17 @@ class WorkDataStore(private val context: Context) {
     suspend fun saveGeofenceRadius(radius: Int) {
         context.dataStore.edit { prefs ->
             prefs[KEY_GEOFENCE_RADIUS] = radius.toString()
+        }
+    }
+
+    val verboseLogging: Flow<Boolean> =
+        context.dataStore.data.map { prefs ->
+            prefs[KEY_VERBOSE_LOGGING]?.toBoolean() ?: false
+        }
+
+    suspend fun saveVerboseLogging(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_VERBOSE_LOGGING] = enabled.toString()
         }
     }
 

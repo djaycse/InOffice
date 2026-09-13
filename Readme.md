@@ -20,6 +20,14 @@ percentage and "Team Hub" days.
 
 ## Changelog
 
+### Version 1.4.0
+
+#### New features
+
+* Geofence radius setting (default 50m) now user-configurable via Settings > Auto-detect screen
+* Added Verbose log option to troubleshoot why app may not be detecting location and/or being at an
+  office location, or no longer at an office location
+
 ### Version 1.3.0
 
 #### Changes

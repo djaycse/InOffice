@@ -79,6 +79,8 @@ fun GoalSettingsScreen(
                         
                         store.saveGoalOfficePercent(percent.coerceIn(0, 100))
                         store.saveGoalTeamHubDays(days.coerceAtLeast(0))
+
+                        store.addGpsLog("Settings updated: Goals")
                         
                         onBack()
                     }

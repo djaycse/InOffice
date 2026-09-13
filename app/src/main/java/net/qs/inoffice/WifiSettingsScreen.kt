@@ -182,6 +182,8 @@ fun WifiSettingsScreen(
                         
                         val radius = geofenceRadiusValue.toIntOrNull() ?: 50
                         store.saveGeofenceRadius(radius.coerceIn(5, 1000))
+
+                        store.addGpsLog("Settings updated: Auto-detect")
                         
                         // Trigger immediate scan
                         val workRequest = OneTimeWorkRequestBuilder<LocationWorker>().build()
